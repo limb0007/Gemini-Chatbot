@@ -2,7 +2,7 @@
 
 import { Attachment, Message } from "ai";
 import { useChat } from "ai/react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 
 import { Message as PreviewMessage } from "@/components/custom/message";
@@ -11,6 +11,9 @@ import { MultimodalInput } from "./multimodal-input";
 import { Overview } from "./overview";
 import { CancelFlightCard } from "@/components/custom/Cancel-Flight-Card";
 import TicketListCard from "@/components/custom/ticket-list-card";
+
+// ⬇️ NEW: chat actions (download PDF, email, loading animation)
+import ChatActions from "@/components/custom/chat-actions";
 
 export function Chat({
   id,
@@ -46,6 +49,13 @@ export function Chat({
   const [messagesContainerRef, messagesEndRef] =
     useScrollToBottom<HTMLDivElement>();
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
+
+  // Map SDK Message -> lightweight shape expected by ChatActions
+  const exportableMessages = useMemo(
+    () =>
+      messages.map((m) => ({ id: m.id, role: m.role, content: m.content })),
+    [messages]
+  );
 
   return (
     <div className="min-h-dvh h-dvh w-full bg-black text-zinc-100">
@@ -138,11 +148,21 @@ export function Chat({
             );
           })}
 
+          {/* Spacer at the end */}
           <div ref={messagesEndRef} className="min-h-[24px] min-w-[24px] shrink-0" />
         </div>
 
         {/* Composer (NO extra max-w/margins inside) */}
-        <div className="w-full px-4 pb-4">
+        <div className="w-full px-4 pb-3">
+          {/* Moved actions lower, above the composer */}
+          <div className="mb-2 flex w-full items-center justify-end">
+            <ChatActions
+              className="scale-[0.95]"
+              messages={exportableMessages}
+              isLoading={isLoading}
+              emailConfig={{ to: undefined, subjectPrefix: "" }}
+            />
+          </div>
           <form className="relative flex w-full flex-row items-end gap-2">
             <div className="w-full">
               <MultimodalInput
@@ -160,7 +180,7 @@ export function Chat({
                 messages={messages}
                 append={append}
                 // IMPORTANT: make sure MultimodalInput root uses these if you accept className
-                // className="w-full" 
+                // className="w-full"
               />
             </div>
           </form>
